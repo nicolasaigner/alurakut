@@ -148,7 +148,7 @@ export default function Home() {
                                 if (index <= 5) {
                                     return (
                                         <li key={itemAtual.id}>
-                                            <a href="https://github.com/nicolasaigner">
+                                            <a href="https://github.com/nicolasaigner" target="_blank">
                                                 <img src={itemAtual.image}/>
                                                 <span>{itemAtual.title}</span>
                                             </a>
