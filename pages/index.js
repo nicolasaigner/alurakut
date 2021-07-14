@@ -4,16 +4,39 @@ import {AlurakutMenu, AlurakutProfileSidebarMenuDefault, OrkutNostalgicIconSet} 
 import {ProfileRelationsBoxWrapper} from '../src/components/ProfileRelations';
 import React from "react";
 
+const DebugPrint = (data) => {
+    // https://stackoverflow.com/questions/30765163/pretty-printing-json-with-react
+    const [show, setShow] = React.useState(false);
+
+    return (
+        <div key={1} className='root'>
+            <div className='header' onClick={ ()=>{setShow(!show)} }>
+                <strong>Debug</strong>
+            </div>
+            { show
+                ? (
+                    <pre className='pre'>
+       {JSON.stringify(data, null, 2) }
+      </pre>
+                )
+                : null
+            }
+        </div>
+    )
+}
+
 function ProfileSidebar(propriedades) {
-    console.log(propriedades);
+    console.log('PROFILE SIDEBAR', propriedades);
+
+    console.log(`https://github.com/${propriedades.user.login}.png`);
     return (
         <Box as="aside">
-            <img src={`https://github.com/${propriedades.githubUser}.png`} style={{borderRadius: '8px'}}/>
+            <img src={`https://github.com/${propriedades.user.login}.png`} style={{borderRadius: '8px'}}/>
             <hr />
 
             <p>
-                <a className="boxLink" href={`https://github.com/${propriedades.githubUser}`} target="_blank">
-                    @{propriedades.githubUser}
+                <a className="boxLink" href={`https://github.com/${propriedades.user.login}.png`} target="_blank">
+                    @{propriedades.user.login}
                 </a>
             </p>
 
@@ -24,6 +47,43 @@ function ProfileSidebar(propriedades) {
     )
 }
 
+function ProfileRelationsBox(props) {
+    const data = [];
+    props.items.forEach((item, index) => {
+        if (typeof item === "string") {
+            data.push({id: index, title: item, image: `https://github.com/${item}.png`});
+        } else if (typeof item === "object" && item.type === 'User') {
+            data.push({id: item.id, title: item.login, image: item.avatar_url});
+        } else {
+            data.push({id: item.id, title: item.title, image: item.image});
+        }
+    });
+
+    return (
+        <ProfileRelationsBoxWrapper>
+            <h2 className="smallTitle">
+                {props.title} ({props.items.length})
+            </h2>
+
+
+            <ul>
+                {data.map((itemAtual, index) => {
+                    if (index <= 5) {
+                        return (
+                            <li key={itemAtual.id}>
+                                <a href={`/users/${itemAtual.title}`}>
+                                    <img src={itemAtual.image}/>
+                                    <span>{itemAtual.title}</span>
+                                </a>
+                            </li>
+                        )
+                    }
+                })}
+            </ul>
+        </ProfileRelationsBoxWrapper>
+    );
+}
+
 export default function Home() {
 
     const [comunidades, setComunidades] = React.useState([{
@@ -32,15 +92,8 @@ export default function Home() {
         image: 'https://alurakut.vercel.app/capa-comunidade-01.jpg'
     }
     ]);
-    /*const comunidades = [
-        'Alurakut'
-    ];*/
 
-    const usuarioAleatorio = {
-        githubUser: 'nicolasaigner',
-        firstName: 'Nícolas',
-        lastName: 'Aigner'
-    };
+    const [user, setUser] = React.useState({});
 
     const pessoasFavoritas = [
         'juunegreiros',
@@ -51,17 +104,38 @@ export default function Home() {
         'felipefialho'
     ]
 
+    const [seguidores, setSeguidores] = React.useState([]);
+
+    React.useEffect(() => {
+        fetch(`https://api.github.com/users/nicolasaigner`)
+            .then((respostaDoServidor) => {
+                return respostaDoServidor.json();
+            })
+            .then((respostaCompleta) => {
+                console.log('RESPOSTA COMPLETA', respostaCompleta);
+                setUser(respostaCompleta);
+
+                fetch(respostaCompleta.followers_url).then((followers) => {
+                    return followers.json();
+                })
+                .then((respostaCompleta) => {
+                    setSeguidores(respostaCompleta);
+                });
+
+            });
+    }, []);
+
     return (
         <>
-            <AlurakutMenu githubUser={usuarioAleatorio.githubUser}/>
+            <AlurakutMenu githubUser={user}/>
             <MainGrid>
                 <div className="profileArea" style={{gridArea: 'profileArea'}}>
-                    <ProfileSidebar githubUser={usuarioAleatorio.githubUser}/>
+                    <ProfileSidebar user={user}/>
                 </div>
                 <div className="welcomeArea" style={{gridArea: 'welcomeArea'}}>
                     <Box>
                         <h1 className="title">
-                            Bem vindo(a), {usuarioAleatorio.firstName}
+                            Bem vindo(a), {user.name}
                         </h1>
 
                         <OrkutNostalgicIconSet/>
@@ -117,47 +191,10 @@ export default function Home() {
                     </Box>
                 </div>
                 <div className="profileRelationsArea" style={{gridArea: 'profileRelationsArea'}}>
-                    <ProfileRelationsBoxWrapper>
-                        <h2 className="smallTitle">
-                            Pessoas da comunidade ({pessoasFavoritas.length})
-                        </h2>
 
-                        <ul>
-                            {pessoasFavoritas.map((itemAtual, index) => {
-                                if (index <= 5) {
-                                    return (
-                                        <li key={itemAtual}>
-                                            <a href={`/users/${itemAtual}`}>
-                                                <img src={`https://github.com/${itemAtual}.png`}/>
-                                                <span>{itemAtual}</span>
-                                            </a>
-                                        </li>
-                                    )
-                                }
-                            })}
-                        </ul>
-                    </ProfileRelationsBoxWrapper>
-
-                    <ProfileRelationsBoxWrapper>
-                        <h2 className="smallTitle">
-                            Minhas comunidades ({comunidades.length})
-                        </h2>
-
-                        <ul>
-                            {comunidades.map((itemAtual, index) => {
-                                if (index <= 5) {
-                                    return (
-                                        <li key={itemAtual.id}>
-                                            <a href="https://github.com/nicolasaigner" target="_blank">
-                                                <img src={itemAtual.image}/>
-                                                <span>{itemAtual.title}</span>
-                                            </a>
-                                        </li>
-                                    )
-                                }
-                            })}
-                        </ul>
-                    </ProfileRelationsBoxWrapper>
+                    <ProfileRelationsBox items={seguidores} title="Seguidores" />
+                    <ProfileRelationsBox items={pessoasFavoritas} title="Amigos" />
+                    <ProfileRelationsBox items={comunidades} title="Minhas comunidades" />
                 </div>
             </MainGrid>
         </>
